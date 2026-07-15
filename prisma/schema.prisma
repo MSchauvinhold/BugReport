@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  username  String    @unique
+  password  String // hash scrypt (salt:hash)
+  projects  Project[]
+  sessions  Session[]
+  createdAt DateTime  @default(now())
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Project {
+  id        String     @id @default(cuid())
+  name      String
+  prefix    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  bugs      Bug[]
+  testCases TestCase[]
+  createdAt DateTime   @default(now())
+
+  @@index([userId])
+}
+
+model Bug {
+  id          String   @id @default(cuid())
+  bugNumber   Int
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  title       String
+  description String     @default("") // resumen / contexto del problema
+  severity    String
+  priority    String
+  steps       String[]
+  expected    String
+  actual      String
+  notes       String     @default("") // notas adicionales / causa raíz probable
+  environment String?
+  module      String?
+  tags        String[]
+  screenshots String[]
+  status      String     @default("Nuevo")
+  events      BugEvent[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([projectId, bugNumber])
+}
+
+model BugEvent {
+  id        String   @id @default(cuid())
+  bug       Bug      @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  bugId     String
+  type      String // "created" | "status" | "duplicated" | "edited"
+  detail    String   @default("") // ej: "Nuevo → Asignado"
+  username  String // quién lo hizo
+  createdAt DateTime @default(now())
+
+  @@index([bugId])
+}
+
+model TestCase {
+  id             String   @id @default(cuid())
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId      String
+  title          String
+  preconditions  String   @default("")
+  steps          String[]
+  expectedResult String
+  status         String   @default("Pendiente") // "Pendiente" | "Pasó" | "Falló" | "Bloqueado"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+}
