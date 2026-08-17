@@ -100,8 +100,11 @@ export async function generateBugDraft(
 export type AITestCase = {
   title: string;
   preconditions: string;
+  testData: string;
   steps: string[];
   expectedResult: string;
+  priority: string;
+  severity: string;
 };
 
 const TEST_CASES_SCHEMA = {
@@ -114,10 +117,13 @@ const TEST_CASES_SCHEMA = {
         properties: {
           title: { type: "string", description: "Título del caso de prueba" },
           preconditions: { type: "string", description: "Precondiciones; cadena vacía si no hay" },
+          testData: { type: "string", description: "Valores concretos de entrada a usar (ej: usuario/contraseña, montos); cadena vacía si el caso no necesita datos específicos" },
           steps: { type: "array", items: { type: "string" }, description: "Pasos del caso, uno por elemento" },
           expectedResult: { type: "string", description: "Resultado esperado del caso" },
+          priority: { type: "string", enum: ["Alta", "Media", "Baja"], description: "Qué tan importante es ejecutar este caso" },
+          severity: { type: "string", enum: ["Crítica", "Alta", "Media", "Baja"], description: "Impacto si la funcionalidad probada fallara" },
         },
-        required: ["title", "preconditions", "steps", "expectedResult"],
+        required: ["title", "preconditions", "testData", "steps", "expectedResult", "priority", "severity"],
         additionalProperties: false,
       },
     },
@@ -126,8 +132,12 @@ const TEST_CASES_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-export async function generateTestCases(description: string): Promise<AITestCase[]> {
+export async function generateTestCases(description: string, module?: string): Promise<AITestCase[]> {
   const client = getClient();
+
+  const moduleHint = module
+    ? `Los casos son para el módulo "${module}". Enfocate en esa funcionalidad puntual, no en el sistema completo.`
+    : "";
 
   const message = await client.messages.create({
     model: MODEL,
@@ -136,7 +146,9 @@ export async function generateTestCases(description: string): Promise<AITestCase
       "Sos un QA analista funcional senior. A partir de la descripción de una funcionalidad o user story, " +
       "generás un conjunto de casos de prueba completos en español rioplatense: caminos felices, " +
       "casos límite, validaciones y casos negativos. Cada caso debe ser concreto y verificable, " +
-      "con pasos accionables y un resultado esperado claro. Cubrí entre 4 y 8 casos según la complejidad.",
+      "con pasos accionables y un resultado esperado claro. Cubrí entre 4 y 8 casos según la complejidad. " +
+      "Priorizá y clasificá la severidad con criterio real, no pongas todo en Alta. " +
+      moduleHint,
     messages: [{ role: "user", content: `Funcionalidad / user story:\n\n${description}` }],
     output_config: { format: { type: "json_schema", schema: TEST_CASES_SCHEMA } },
   });

@@ -5,20 +5,26 @@ import { useRouter } from "next/navigation";
 import { useToastStore } from "@/lib/store/toastStore";
 import { saveTestCases } from "@/app/actions/testcases";
 import { CopyButton } from "./CopyButton";
+import { SeverityBadge } from "./SeverityBadge";
+import { PriorityDot } from "./PriorityDot";
 
 type TestCase = {
   title: string;
   preconditions: string;
+  testData: string;
   steps: string[];
   expectedResult: string;
+  priority: string;
+  severity: string;
 };
 
 function toMarkdownTable(cases: TestCase[]): string {
-  const header = "| # | Caso | Precondiciones | Pasos | Resultado esperado |\n|---|------|----------------|-------|--------------------|";
+  const header = "| # | Caso | Precondiciones | Datos de entrada | Pasos | Resultado esperado | Prioridad | Severidad |\n|---|------|----------------|-------------------|-------|--------------------|-----------|-----------|";
   const rows = cases.map((c, i) => {
     const steps = c.steps.map((s, j) => `${j + 1}. ${s}`).join("<br>");
     const pre = c.preconditions || "—";
-    return `| ${i + 1} | ${c.title} | ${pre} | ${steps} | ${c.expectedResult} |`;
+    const data = c.testData || "—";
+    return `| ${i + 1} | ${c.title} | ${pre} | ${data} | ${steps} | ${c.expectedResult} | ${c.priority} | ${c.severity} |`;
   });
   return [header, ...rows].join("\n");
 }
@@ -35,7 +41,7 @@ function toGherkin(cases: TestCase[]): string {
     .join("\n\n");
 }
 
-export function TestCaseGenerator({ projectId }: { projectId: string }) {
+export function TestCaseGenerator({ projectId, module }: { projectId: string; module?: string }) {
   const toast = useToastStore();
   const router = useRouter();
   const [text, setText] = useState("");
@@ -47,12 +53,12 @@ export function TestCaseGenerator({ projectId }: { projectId: string }) {
   function save() {
     if (!cases || cases.length === 0) return;
     startSaving(async () => {
-      const res = await saveTestCases(projectId, cases);
+      const res = await saveTestCases(projectId, cases, module);
       if (!res.ok) {
         toast.error(res.error ?? "No se pudieron guardar los casos.");
         return;
       }
-      toast.success(`${res.count} casos guardados en el proyecto.`);
+      toast.success(`${res.count} casos guardados${module ? ` en «${module}»` : ""}.`);
       setCases(null);
       setText("");
       router.refresh();
@@ -69,7 +75,7 @@ export function TestCaseGenerator({ projectId }: { projectId: string }) {
       const res = await fetch("/api/ai/test-cases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: text }),
+        body: JSON.stringify({ description: text, module }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -90,12 +96,18 @@ export function TestCaseGenerator({ projectId }: { projectId: string }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="brg-card p-[18px]">
-        <label className="brg-label">Funcionalidad o user story</label>
+        <label className="brg-label">
+          Funcionalidad o user story{module ? ` de «${module}»` : ""}
+        </label>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={4}
-          placeholder="Pegá la user story o describí la funcionalidad a cubrir, con sus reglas y validaciones. Cuanto más contexto, más completos los casos."
+          placeholder={
+            module
+              ? `Describí la funcionalidad de ${module} a cubrir, con sus reglas y validaciones. Cuanto más contexto, más completos los casos.`
+              : "Pegá la user story o describí la funcionalidad a cubrir, con sus reglas y validaciones. Cuanto más contexto, más completos los casos."
+          }
           className="brg-input"
           style={{ padding: "10px 12px" }}
         />
@@ -146,15 +158,27 @@ export function TestCaseGenerator({ projectId }: { projectId: string }) {
             <div className="p-[18px] flex flex-col gap-3">
               {cases.map((c, i) => (
                 <div key={i} className="rounded-[10px] p-3.5" style={{ border: "1px solid var(--border)" }}>
-                  <div className="flex items-start gap-2">
-                    <span className="font-mono text-[11px] shrink-0 mt-0.5" style={{ color: "var(--accent-text)" }}>
-                      TC-{String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>{c.title}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="font-mono text-[11px] shrink-0 mt-0.5" style={{ color: "var(--accent-text)" }}>
+                        TC-{String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>{c.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <PriorityDot priority={c.priority} />
+                      {c.severity && <SeverityBadge severity={c.severity} />}
+                    </div>
                   </div>
                   {c.preconditions && (
                     <div className="text-[12px] mt-2" style={{ color: "var(--text-2)" }}>
                       <span style={{ color: "var(--text-3)" }}>Precondiciones: </span>{c.preconditions}
+                    </div>
+                  )}
+                  {c.testData && (
+                    <div className="text-[12px] mt-2" style={{ color: "var(--text-2)" }}>
+                      <span style={{ color: "var(--text-3)" }}>Datos de entrada: </span>
+                      <span style={{ fontFamily: "var(--font-mono)" }}>{c.testData}</span>
                     </div>
                   )}
                   <ol className="mt-2 flex flex-col gap-1">

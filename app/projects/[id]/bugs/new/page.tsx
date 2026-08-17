@@ -53,10 +53,12 @@ export default async function NewBugPage({ params, searchParams }: PageProps) {
     if (tc) {
       initial = {
         title: `Falla en: ${tc.title}`,
+        description: tc.testData ? `Datos de entrada usados: ${tc.testData}` : "",
         steps: tc.steps,
         expected: tc.expectedResult,
-        actual: "",
-        module: "",
+        actual: tc.actualResult || "",
+        environment: tc.environment ?? "",
+        module: tc.module ?? "",
         tags: [],
       };
     }

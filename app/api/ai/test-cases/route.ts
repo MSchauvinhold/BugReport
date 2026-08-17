@@ -16,9 +16,12 @@ export async function POST(req: NextRequest) {
   }
 
   let description = "";
+  let moduleName: string | undefined;
   try {
     const body = await req.json();
     description = (body.description ?? "").toString().trim();
+    const rawModule = (body.module ?? "").toString().trim();
+    if (rawModule) moduleName = rawModule;
   } catch {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const testCases = await generateTestCases(description);
+    const testCases = await generateTestCases(description, moduleName);
     return NextResponse.json({ testCases });
   } catch (err) {
     console.error("generateTestCases error:", err);

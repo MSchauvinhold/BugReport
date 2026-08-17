@@ -78,16 +78,24 @@ model BugEvent {
 }
 
 model TestCase {
-  id             String   @id @default(cuid())
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId      String
+  module         String? // agrupa los casos dentro del proyecto (ej: "Login", "POS"); null = sin módulo
   title          String
-  preconditions  String   @default("")
+  preconditions  String    @default("")
+  testData       String    @default("") // valores concretos de entrada (ej: usuario/contraseña)
   steps          String[]
   expectedResult String
-  status         String   @default("Pendiente") // "Pendiente" | "Pasó" | "Falló" | "Bloqueado"
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  actualResult   String    @default("") // qué pasó realmente al ejecutar (se completa al marcar Falló/Bloqueado)
+  priority       String? // "Alta" | "Media" | "Baja"
+  severity       String? // "Crítica" | "Alta" | "Media" | "Baja"
+  environment    String?
+  screenshots    String[]  @default([])
+  status         String    @default("Pendiente") // "Pendiente" | "Pasó" | "Falló" | "Bloqueado"
+  executedAt     DateTime? // fecha de la última ejecución (cuando status pasa a Pasó/Falló/Bloqueado)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([projectId])
 }
