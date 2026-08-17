@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { login, type LoginState } from "@/app/actions/auth";
 
 const inputCls =
@@ -10,6 +10,7 @@ const inputCls =
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(login, {});
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={formAction} noValidate className="mt-7">
@@ -24,13 +25,36 @@ export function LoginForm() {
       />
 
       <label className="block text-[12px] font-semibold mb-1.5 mt-[15px]" style={{ color: "#c7cad0" }}>Contraseña</label>
-      <input
-        type="password"
-        name="password"
-        autoComplete="current-password"
-        className={`${inputCls} ${state.error ? "!border-[#f0666b] focus:!ring-[#f0666b]/25" : ""}`}
-        style={{ padding: "11px 13px" }}
-      />
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          name="password"
+          autoComplete="current-password"
+          className={`${inputCls} ${state.error ? "!border-[#f0666b] focus:!ring-[#f0666b]/25" : ""}`}
+          style={{ padding: "11px 40px 11px 13px" }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword((v) => !v)}
+          tabIndex={-1}
+          className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-100"
+          style={{ color: "#565b64", opacity: 0.7 }}
+          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+        >
+          {showPassword ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          )}
+        </button>
+      </div>
 
       {state.error && (
         <div className="flex items-center gap-1.5 mt-2" style={{ fontSize: "11.5px", color: "#f0666b" }}>
